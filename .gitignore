@@ -4,3 +4,4 @@ civ_checkpoints/
 civ_trained_model/
 *.json
 *.md
+real_civ_model/

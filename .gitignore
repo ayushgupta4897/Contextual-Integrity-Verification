@@ -1,2 +1,6 @@
 models/
 .DS_Store
+civ_checkpoints/
+civ_trained_model/
+*.json
+*.md

@@ -1,0 +1,13 @@
+{
+  "model_name": "unsloth/Llama-3.2-3B-Instruct",
+  "device": "mps",
+  "platform": "Darwin arm64",
+  "vocab_size": 128256,
+  "model_parameters": 3212749824,
+  "quantized": true,
+  "memory_sufficient": true,
+  "torch_version": "2.7.1",
+  "mps_available": true,
+  "ready_for_civ": true,
+  "setup_timestamp": "Darwin"
+}

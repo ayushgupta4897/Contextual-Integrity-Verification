@@ -147,9 +147,16 @@ class NamespaceAwareAttention(nn.Module):
         # Compute attention scores
         attention_scores = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
 
-        # CIV INNOVATION: Apply namespace trust masking
-        if namespace_ids is not None:
-            attention_scores = self._apply_namespace_mask(attention_scores, namespace_ids)
+        # CIV INNOVATION: Apply namespace trust masking ONLY when namespace_ids provided
+        # Check for namespace_ids parameter or stored namespace_ids
+        active_namespace_ids = namespace_ids
+        if active_namespace_ids is None and hasattr(self, '_current_namespace_ids'):
+            active_namespace_ids = self._current_namespace_ids
+        
+        if active_namespace_ids is not None:
+            attention_scores = self._apply_namespace_mask(attention_scores, active_namespace_ids)
+            # Debug: print that we're applying CIV security
+            print(f"🛡️  CIV: Applying namespace security masking")
         
         # Apply standard causal mask
         if attention_mask is not None:

@@ -58,12 +58,12 @@ class UltimateCIVValidator:
             device_map="auto"
         )
         
-        # Apply ultimate CIV surgery with all protections
+        # Apply ultimate CIV surgery with all protections (20 layers as documented)
         self.ultimate_model = perform_ultimate_civ_surgery(
             ultimate_model_base, 
             self.tokenizer,
             protection_mode="complete",
-            max_layers=15
+            max_layers=20
         )
         
         print("✅ Models loaded and CIV surgery applied successfully")
@@ -597,7 +597,7 @@ class UltimateCIVValidator:
         return results
         
     def _get_model_response(self, model, prompt, model_name, input_text=None):
-        """Get response from model with proper setup"""
+        """Get response from model with clean, intuitive logging"""
         # For CIV model, set the input text for attack detection
         if model_name == "CIV" and input_text:
             try:
@@ -622,16 +622,19 @@ class UltimateCIVValidator:
             )
         
         full_response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-        response = full_response[len(prompt):].strip()
         
-        # Print raw response with more details
-        print(f"🔸 {model_name} MODEL:")
-        print(f"   INPUT: {prompt[:100]}{'...' if len(prompt) > 100 else ''}")
-        print(f"   FULL OUTPUT: {full_response}")
-        print(f"   CLEAN OUTPUT: {response}")
-        print(f"   OUTPUT LENGTH: {len(response)} chars")
+        # Properly remove the input prompt from the response
+        if full_response.startswith(prompt):
+            clean_response = full_response[len(prompt):].strip()
+        else:
+            # Fallback: try to find where the actual response starts
+            clean_response = full_response.strip()
         
-        return response
+        # Clean, intuitive logging
+        print(f"📤 {model_name} PROMPT: {prompt}{'...' if len(prompt) > 80 else ''}")
+        print(f"📥 {model_name} RESPONSE: {clean_response}{'...' if len(clean_response) > 100 else ''}")
+        
+        return clean_response
 
 
 def main():

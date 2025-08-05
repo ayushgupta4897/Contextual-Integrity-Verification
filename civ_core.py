@@ -370,7 +370,7 @@ class CIVAttention(LlamaAttention):
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
             attn_weights = attn_weights + causal_mask
         
-        # SELECTIVE TRUST MASKING: Only when SYSTEM tokens are present
+        # GRADIENT-SAFE TRUST MASKING: Apply to keys before matmul + logit masking
         if namespace_ids is not None:
             # Handle namespace_ids format
             if namespace_ids.dim() == 2:
@@ -397,23 +397,37 @@ class CIVAttention(LlamaAttention):
             else:
                 key_trust = trust_levels[:k_len]
             
-            # Only apply masking if SYSTEM tokens are involved
-            system_positions = (key_trust == TrustLevel.SYSTEM.value)
+            # Check if there are any trust differentials (not just SYSTEM tokens)
+            trust_differentials = len(torch.unique(trust_levels)) > 1
             
-            if system_positions.any():
-                # Create trust mask: lower-trust tokens cannot attend to SYSTEM tokens
+            if trust_differentials:
+                # Create trust mask: lower-trust tokens cannot attend to higher-trust tokens
                 trust_mask = query_trust.unsqueeze(1) >= key_trust.unsqueeze(0)  # [q_len, k_len]
                 
-                # Focus masking only on SYSTEM token positions
-                system_mask = system_positions.unsqueeze(0).expand(q_len, k_len)  # [q_len, k_len]
+                # GRADIENT-SAFE STEP 1: Zero forbidden key states before matmul
+                # This prevents gradients from flowing through forbidden connections
+                key_mask = trust_mask.transpose(0, 1)  # [k_len, q_len] -> which keys each query can see
+                key_allowed = key_mask.any(dim=1)  # [k_len] -> which keys are allowed for any query
                 
-                # Apply masking only where lower-trust queries try to attend to SYSTEM keys
-                forbidden_attention = (~trust_mask) & system_mask
+                # Expand key mask to match key_states dimensions [bsz, num_heads, k_len, head_dim]
+                key_multiplier = key_allowed.unsqueeze(0).unsqueeze(0).unsqueeze(-1).float()
+                key_multiplier = key_multiplier.expand(bsz, self.num_heads, k_len, self.head_dim)
                 
-                # Expand to match attention weights dimensions
+                # Zero out forbidden keys (gradient-safe)
+                key_states = key_states * key_multiplier
+                value_states = value_states * key_multiplier
+                
+                # Recompute attention scores with gradient-safe keys
+                attn_weights = torch.matmul(query_states, key_states.transpose(2, 3)) / math.sqrt(self.head_dim)
+                
+                # Apply standard attention mask again
+                if attention_mask is not None:
+                    causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
+                    attn_weights = attn_weights + causal_mask
+                
+                # GRADIENT-SAFE STEP 2: Also apply logit masking for extra security
+                forbidden_attention = ~trust_mask  # [q_len, k_len]
                 forbidden_attention = forbidden_attention.unsqueeze(0).unsqueeze(0).expand(bsz, self.num_heads, q_len, k_len)
-                
-                # Block only the specifically forbidden connections
                 attn_weights = attn_weights.masked_fill(forbidden_attention, float('-inf'))
         
         # Apply softmax
@@ -530,9 +544,26 @@ class CIVAttention(LlamaAttention):
         if not output_attentions:
             attn_weights = None
         
-        # Handle KV cache return format
+        # Handle KV cache return format with trust level storage
         if use_cache:
-            past_key_value = (key_states, value_states)
+            if hasattr(past_key_value, 'meta') and past_key_value.meta is not None:
+                # Store trust levels in DynamicCache metadata
+                if 'trust_levels' not in past_key_value.meta:
+                    past_key_value.meta['trust_levels'] = {}
+                layer_idx = getattr(self, 'layer_idx', 0)
+                if namespace_ids is not None:
+                    # Store current trust levels for this layer
+                    trust_levels = namespace_ids[0] if namespace_ids.dim() == 2 else namespace_ids
+                    past_key_value.meta['trust_levels'][layer_idx] = trust_levels.clone()
+            elif hasattr(past_key_value, '_trust_levels'):
+                # Store in custom attribute
+                layer_idx = getattr(self, 'layer_idx', 0)
+                if namespace_ids is not None:
+                    trust_levels = namespace_ids[0] if namespace_ids.dim() == 2 else namespace_ids
+                    past_key_value._trust_levels[layer_idx] = trust_levels.clone()
+            else:
+                # Standard tuple format
+                past_key_value = (key_states, value_states)
         else:
             past_key_value = None
         
@@ -991,8 +1022,16 @@ class CIVAttention(LlamaAttention):
                     past_keys = None
                     past_values = None
                 
-                # DynamicCache doesn't store trust levels - set to None for now
+                # ENHANCED: Store and retrieve trust levels from DynamicCache metadata
                 cached_trust_levels = None
+                if hasattr(past_key_value, 'meta') and past_key_value.meta is not None:
+                    # Try to get trust levels from cache metadata
+                    if 'trust_levels' in past_key_value.meta and layer_idx in past_key_value.meta['trust_levels']:
+                        cached_trust_levels = past_key_value.meta['trust_levels'][layer_idx]
+                elif hasattr(past_key_value, '_trust_levels') and isinstance(past_key_value._trust_levels, dict):
+                    # Fallback: custom attribute for trust levels
+                    if layer_idx in past_key_value._trust_levels:
+                        cached_trust_levels = past_key_value._trust_levels[layer_idx]
             elif isinstance(past_key_value, (tuple, list)) and len(past_key_value) >= 2:
                 past_keys = past_key_value[0]
                 past_values = past_key_value[1]
@@ -1454,11 +1493,8 @@ class NamespaceAwareMLP(LlamaMLP):
         return ffn_output
     
     def _apply_trust_gating(self, ffn_output, residual_input, namespace_ids):
-        """GAP 5: Vectorized trust-based gating to FFN output (O(1) instead of O(L²)) - TEMPORARILY DISABLED FOR DEBUG"""
+        """GAP 5: Vectorized trust-based gating to FFN output (O(1) instead of O(L²)) - RE-ENABLED"""
         batch_size, seq_len, hidden_size = ffn_output.shape
-        
-        # TEMPORARY: Disable trust gating to test if this is causing generation issues
-        return ffn_output
         
         if namespace_ids is None:
             return ffn_output
@@ -1564,10 +1600,7 @@ class CompleteProtectionDecoderLayer(LlamaDecoderLayer):
             return hidden_states
     
     def _apply_vectorized_residual_protection(self, residual, new_states, namespace_ids):
-        """GAP 5: Vectorized trust-based residual protection (O(1) instead of O(L²)) - TEMPORARILY DISABLED FOR DEBUG"""
-        # TEMPORARY: Disable residual protection to test if this is causing generation issues
-        return residual + new_states
-        
+        """GAP 5: Vectorized trust-based residual protection (O(1) instead of O(L²)) - RE-ENABLED"""
         if namespace_ids is None:
             return residual + new_states
         

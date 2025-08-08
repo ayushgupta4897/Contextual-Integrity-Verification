@@ -6,3 +6,4 @@ civ_trained_model/
 real_civ_model/
 civenv/
 dataset/*.py
+__pycache__/*

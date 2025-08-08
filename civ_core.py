@@ -226,29 +226,6 @@ class CIVAttention(LlamaAttention):
                 **kwargs
             )
         
-        # ORIGINAL CODE (temporarily disabled):
-        # CRITICAL SECURITY FIX: Implement true pre-softmax masking with crypto verification
-        if namespace_ids is not None and self.civ_enabled:
-            # GAP 4: Runtime cryptographic verification (skip for default namespace_ids)
-            if not default_namespace_ids and not self._verify_namespace_integrity(namespace_ids, hidden_states):
-                raise SecurityError("CRITICAL: Namespace ID verification failed - potential spoofing detected!")
-            
-            return self._civ_attention_forward(
-                hidden_states, attention_mask, position_ids, past_key_value,
-                output_attentions, use_cache, cache_position, namespace_ids, **kwargs
-            )
-        else:
-            # Standard attention without CIV
-            return super().forward(
-                hidden_states=hidden_states,
-                attention_mask=attention_mask,
-                position_ids=position_ids,
-                past_key_value=past_key_value,
-                output_attentions=output_attentions,
-                use_cache=use_cache,
-                cache_position=cache_position,
-                **kwargs
-            )
     
     def _apply_post_attention_trust_masking(self, result, namespace_ids, output_attentions, use_cache):
         """
@@ -800,13 +777,7 @@ class CIVAttention(LlamaAttention):
         query_states = query_states.view(bsz, q_len, self.num_heads, self.head_dim).transpose(1, 2)
         key_states = key_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
         value_states = value_states.view(bsz, q_len, self.num_key_value_heads, self.head_dim).transpose(1, 2)
-        
-        # Handle KV cache (simplified - skip cache for initial testing)
-        if past_key_value is not None:
-            # For now, skip KV cache to focus on core CIV functionality
-            # TODO: Properly handle different cache formats later
-            pass
-        
+                
         k_len = key_states.shape[-2]
         
         # Repeat key/value heads for GQA
@@ -820,42 +791,7 @@ class CIVAttention(LlamaAttention):
         if attention_mask is not None:
             causal_mask = attention_mask[:, :, :, : key_states.shape[-2]]
             attn_weights = attn_weights + causal_mask
-        
-        # TEMPORARY: Skip trust masking to test if this is the issue
-        # TODO: Re-enable trust masking once core attention is working
-        if False and namespace_ids is not None:  # Disabled for debugging
-            # Simple trust masking logic
-            if namespace_ids.dim() == 2:
-                trust_levels = namespace_ids[0]  # [seq_len]
-            else:
-                trust_levels = namespace_ids
-            
-            # Pad trust levels to match q_len and k_len
-            if len(trust_levels) < q_len:
-                padding = torch.full(
-                    (q_len - len(trust_levels),), TrustLevel.USER.value,
-                    device=trust_levels.device, dtype=trust_levels.dtype
-                )
-                query_trust = torch.cat([trust_levels, padding])
-            else:
-                query_trust = trust_levels[:q_len]
-            
-            if len(trust_levels) < k_len:
-                padding = torch.full(
-                    (k_len - len(trust_levels),), TrustLevel.USER.value,
-                    device=trust_levels.device, dtype=trust_levels.dtype
-                )
-                key_trust = torch.cat([trust_levels, padding])
-            else:
-                key_trust = trust_levels[:k_len]
-            
-            # Create trust mask: query_trust >= key_trust (lower trust cannot attend to higher trust)
-            trust_mask = query_trust.unsqueeze(1) >= key_trust.unsqueeze(0)  # [q_len, k_len]
-            trust_mask = trust_mask.unsqueeze(0).unsqueeze(0).expand(bsz, self.num_heads, q_len, k_len)
-            
-            # Apply trust mask by setting forbidden connections to -inf
-            attn_weights = attn_weights.masked_fill(~trust_mask, float('-inf'))
-        
+                
         # Apply softmax
         attn_weights = nn.functional.softmax(attn_weights, dim=-1, dtype=torch.float32).to(query_states.dtype)
         attn_weights = nn.functional.dropout(attn_weights, p=self.attention_dropout, training=self.training)
@@ -1127,8 +1063,6 @@ class CIVAttention(LlamaAttention):
         
         CRITICAL SECURITY: This ensures forbidden information is mathematically 
         impossible to access, not just downweighted.
-        
-        Gap 2 Fix: Properly handle cached trust levels from previous generation steps
         """
         batch_size, num_heads, q_len, k_len = attn_logits.shape
         
@@ -1225,9 +1159,7 @@ class CIVAttention(LlamaAttention):
         return masked_logits
     
     def _compute_trust_mask(self, namespace_ids, cached_trust_levels, query_shape, key_shape):
-        """
-        GAP 8: Compute trust mask for gradient-safe masking
-        
+        """        
         Returns a mask that can be applied to key_states before dot-product
         to prevent gradient leakage through forbidden attention pairs.
         """
@@ -1300,9 +1232,7 @@ class CIVAttention(LlamaAttention):
         return trust_mask
     
     def _apply_gradient_safe_mask(self, key_states, trust_mask):
-        """
-        GAP 8: Apply trust mask to key_states in a gradient-safe way
-        
+        """        
         Instead of masking logits after dot-product, we mask the keys before
         dot-product so forbidden pairs never enter the computational graph.
         """
@@ -1323,8 +1253,6 @@ class CIVAttention(LlamaAttention):
     
     def _verify_namespace_integrity(self, namespace_ids, hidden_states):
         """
-        GAP 6 + FIX 3: Runtime cryptographic verification with BATCH-SAFE HMAC
-        
         Verifies that namespace_ids haven't been spoofed by checking against
         stored cryptographic tags using actual token text, with proper batch indexing.
         """
@@ -1670,8 +1598,9 @@ class CIVProtectedModel:
         
         # Replace with CIV-aware methods
         base_model.model.forward = self._civ_forward
-        base_model.forward = self._civ_base_forward  # GAP 9: Intercept logits
-        
+        base_model.forward = self._civ_base_forward  
+
+
     def _apply_protection(self, max_layers):
         """Apply CIV protection to decoder layers"""
         for name, module in self.base_model.named_modules():
@@ -1768,105 +1697,9 @@ class CIVProtectedModel:
             **kwargs
         )
         
-        # GAP 9: Apply role-conditional logit biasing if namespace_ids available
-        if hasattr(self, '_current_namespace_ids') and result.logits is not None:
-            result.logits = self._apply_role_conditional_bias(result.logits, input_ids)
-        
         return result
-    
-    def _apply_role_conditional_bias(self, logits, input_ids):
-        """
-        GAP 9: Apply role-conditional biasing to prevent role-confusion attacks
-        
-        Reduces probability of lower-trust tokens generating content that looks
-        like it comes from higher-trust sources (e.g., SYSTEM instructions).
-        """
-        if not hasattr(self, '_current_namespace_ids'):
-            return logits
-        
-        namespace_ids = self._current_namespace_ids
-        batch_size, seq_len, vocab_size = logits.shape
-        
-        # Handle namespace_ids shape
-        if namespace_ids.dim() == 1:
-            namespace_ids = namespace_ids.unsqueeze(0)
-        
-        # Get trust level for the current generation position
-        current_seq_len = namespace_ids.shape[1]
-        if seq_len > current_seq_len:
-            # For generation, use the trust level of the last input token
-            # New tokens inherit minimum trust from available context
-            if current_seq_len > 0:
-                current_trust = namespace_ids.min().item()
-            else:
-                current_trust = TrustLevel.WEB.value  # Lowest trust as fallback
-        else:
-            # For training/evaluation, use the corresponding trust level
-            current_trust = namespace_ids[0, seq_len - 1].item()
-        
-        # Apply biasing based on current trust level
-        if current_trust < TrustLevel.SYSTEM.value:
-            # Bias against tokens that look like SYSTEM commands/responses
-            system_like_tokens = self._get_system_like_tokens()
-            
-            # Apply negative bias to system-like tokens
-            bias_strength = (TrustLevel.SYSTEM.value - current_trust) / 100.0  # Scale by trust difference
-            
-            for token_id in system_like_tokens:
-                if token_id < vocab_size:
-                    logits[:, -1, token_id] -= bias_strength * 10.0  # Negative bias
-        
-        if current_trust < TrustLevel.USER.value:
-            # Additional bias against authoritative language
-            auth_tokens = self._get_authoritative_tokens()
-            bias_strength = (TrustLevel.USER.value - current_trust) / 100.0
-            
-            for token_id in auth_tokens:
-                if token_id < vocab_size:
-                    logits[:, -1, token_id] -= bias_strength * 5.0
-        
-        return logits
-    
-    def _get_system_like_tokens(self):
-        """Get token IDs that look like SYSTEM commands or responses"""
-        # Common system-like phrases and commands
-        system_phrases = [
-            "System:", "SYSTEM:", "[SYSTEM]", "<system>",
-            "Assistant:", "I am", "My name is", "I'm programmed",
-            "According to my", "My instructions", "I was designed",
-            "Execute:", "Command:", "Override:", "Admin:",
-            "Root:", "Sudo:", "Password:", "Access:",
-        ]
-        
-        system_token_ids = set()
-        for phrase in system_phrases:
-            try:
-                tokens = self.tokenizer.encode(phrase, add_special_tokens=False)
-                system_token_ids.update(tokens)
-            except:
-                pass  # Skip if tokenization fails
-        
-        return list(system_token_ids)
-    
-    def _get_authoritative_tokens(self):
-        """Get token IDs for authoritative/commanding language"""
-        auth_phrases = [
-            "You must", "You should", "You will", "You need to",
-            "I command", "I order", "I require", "Follow",
-            "Obey", "Comply", "Execute", "Perform",
-            "Authorized", "Permission", "Access granted",
-        ]
-        
-        auth_token_ids = set()
-        for phrase in auth_phrases:
-            try:
-                tokens = self.tokenizer.encode(phrase, add_special_tokens=False)
-                auth_token_ids.update(tokens)
-            except:
-                pass
-        
-        return list(auth_token_ids)
-    
+
+
     def generate_with_civ(self, input_ids, namespace_ids, **kwargs):
         """Generate with CIV protection and incremental trust propagation"""
         # Store initial namespace_ids for access during forward pass
@@ -1924,25 +1757,6 @@ class CIVProtectedModel:
     def __getattr__(self, name):
         """Delegate other attributes to base model"""
         return getattr(self.base_model, name)
-
-
-def apply_civ_protection(model, max_layers: int = 20):
-    """
-    Apply CIV protection that actually works during generation
-    
-    Args:
-        model: HuggingFace language model
-        max_layers: Number of layers to protect
-    
-    Returns:
-        Protected model with working CIV generation
-    """
-    # This is just for backward compatibility - doesn't actually work
-    # The real implementation is CIVProtectedModel
-    print(f"⚠️  WARNING: apply_civ_protection() doesn't work with model.generate()")
-    print(f"⚠️  Use CIVProtectedModel instead for working CIV protection")
-    return model
-
 
 def create_namespace_ids(system_text="", user_text="", tool_text="", 
                         document_text="", web_text="", tokenizer=None):
@@ -2041,256 +1855,6 @@ def verify_namespace_integrity(namespace_ids, crypto_tags, original_texts, trust
     print("✅ CRYPTOGRAPHIC VERIFICATION: All namespace tags verified")
     return True
 
-
-def run_fast_unit_tests():
-    """
-    FIX 4: Fast unit test suite integrated in civ_core.py
-    
-    Implements the judge LLM's recommended correctness tests:
-    1. test_single_step_mask - Verify attention masking works
-    2. test_kv_cache_roundtrip - Verify KV-cache recovery
-    3. test_gradient_zero - Verify gradient-safe masking (when enabled)
-    4. test_role_bias_no_overkill - Verify role-conditional bias doesn't break normal generation
-    """
-    print("🧪 RUNNING FAST UNIT TEST SUITE")
-    print("=" * 60)
-    
-    results = {}
-    
-    # Test 1: Single-step attention masking
-    try:
-        print("🔍 Test 1: Single-step attention masking...")
-        
-        # Create minimal test setup with all required attributes
-        config = type('Config', (), {
-            'hidden_size': 64,
-            'num_attention_heads': 4,
-            'num_key_value_heads': 4,
-            'attention_bias': False,
-            'attention_dropout': 0.0,
-            'max_position_embeddings': 2048,
-            'rope_theta': 10000.0,
-        })()
-        
-        attention = CIVAttention(config)
-        attention.civ_enabled = True
-        
-        # Test data: [batch=1, seq=3, hidden=64]
-        hidden_states = torch.randn(1, 3, 64)
-        namespace_ids = torch.tensor([[100, 80, 20]])  # SYSTEM, USER, WEB
-        
-        # Forward pass should work without errors
-        output = attention.forward(
-            hidden_states=hidden_states,
-            namespace_ids=namespace_ids,
-            output_attentions=False,
-            use_cache=False
-        )
-        
-        if output is not None and output.shape == hidden_states.shape:
-            results['single_step_mask'] = True
-            print("  ✅ Single-step masking: PASSED")
-        else:
-            results['single_step_mask'] = False
-            print("  ❌ Single-step masking: FAILED - wrong output shape")
-            
-    except Exception as e:
-        results['single_step_mask'] = False
-        print(f"  ❌ Single-step masking: FAILED - {str(e)[:100]}")
-    
-    # Test 2: KV-cache roundtrip
-    try:
-        print("🔍 Test 2: KV-cache recovery roundtrip...")
-        
-        # Same setup as Test 1 with all required attributes
-        config = type('Config', (), {
-            'hidden_size': 64,
-            'num_attention_heads': 4,
-            'num_key_value_heads': 4,
-            'attention_bias': False,
-            'attention_dropout': 0.0,
-            'max_position_embeddings': 2048,
-            'rope_theta': 10000.0,
-        })()
-        
-        attention = CIVAttention(config)
-        attention.civ_enabled = True
-        
-        # First forward pass to generate cache
-        hidden_states = torch.randn(1, 2, 64)
-        namespace_ids = torch.tensor([[100, 80]])  # SYSTEM, USER
-        
-        output1, cache = attention.forward(
-            hidden_states=hidden_states,
-            namespace_ids=namespace_ids,
-            output_attentions=False,
-            use_cache=True
-        )
-        
-        # Second pass using the cache
-        new_hidden = torch.randn(1, 1, 64)
-        new_namespace = torch.tensor([[20]])  # WEB
-        
-        output2 = attention.forward(
-            hidden_states=new_hidden,
-            past_key_value=cache,
-            namespace_ids=new_namespace,
-            output_attentions=False,
-            use_cache=False
-        )
-        
-        if output1 is not None and output2 is not None:
-            results['kv_cache_roundtrip'] = True
-            print("  ✅ KV-cache roundtrip: PASSED")
-        else:
-            results['kv_cache_roundtrip'] = False
-            print("  ❌ KV-cache roundtrip: FAILED - None outputs")
-            
-    except Exception as e:
-        results['kv_cache_roundtrip'] = False
-        print(f"  ❌ KV-cache roundtrip: FAILED - {str(e)[:100]}")
-    
-    # Test 3: Gradient leak check (simplified)
-    try:
-        print("🔍 Test 3: Gradient leak detection...")
-        
-        # This test checks that gradients don't flow through forbidden paths
-        # Note: Full gradient-safe masking is currently disabled due to GQA complexity
-        
-        config = type('Config', (), {
-            'hidden_size': 64,
-            'num_attention_heads': 4,
-            'num_key_value_heads': 4,
-            'attention_bias': False,
-            'attention_dropout': 0.0,
-            'max_position_embeddings': 2048,
-            'rope_theta': 10000.0,
-        })()
-        
-        attention = CIVAttention(config)
-        attention.civ_enabled = True
-        
-        # Create input with gradient tracking
-        hidden_states = torch.randn(1, 3, 64, requires_grad=True)
-        namespace_ids = torch.tensor([[20, 100, 20]])  # WEB, SYSTEM, WEB
-        
-        # Forward pass
-        output = attention.forward(
-            hidden_states=hidden_states,
-            namespace_ids=namespace_ids,
-            output_attentions=False,
-            use_cache=False
-        )
-        
-        # Backward pass
-        if output is not None:
-            loss = output[0, 0].sum()  # WEB token output
-            loss.backward()
-            
-            # Check if gradients exist (they should, but ideally minimal for forbidden connections)
-            grad_magnitude = hidden_states.grad.abs().sum().item()
-            
-            # For now, just check that gradients exist and are finite
-            if torch.isfinite(torch.tensor(grad_magnitude)) and grad_magnitude > 0:
-                results['gradient_zero'] = True
-                print(f"  ✅ Gradient detection: PASSED (magnitude: {grad_magnitude:.2f})")
-            else:
-                results['gradient_zero'] = False
-                print("  ❌ Gradient detection: FAILED - no gradients")
-        else:
-            results['gradient_zero'] = False
-            print("  ❌ Gradient detection: FAILED - no output")
-            
-    except Exception as e:
-        results['gradient_zero'] = False
-        print(f"  ❌ Gradient detection: FAILED - {str(e)[:100]}")
-    
-    # Test 4: Role bias doesn't break normal generation
-    try:
-        print("🔍 Test 4: Role-conditional bias validation...")
-        
-        # Create a minimal CIV model setup
-        config = type('Config', (), {
-            'hidden_size': 64,
-            'num_attention_heads': 4,
-            'num_key_value_heads': 4,
-            'attention_bias': False,
-        })()
-        
-        # Mock a minimal base model with required methods
-        class MockInnerModel:
-            def __init__(self):
-                self.layers = []  # Empty layers for testing
-            
-            def forward(self, *args, **kwargs):
-                return None  # Mock inner model forward
-        
-        class MockModel:
-            def __init__(self):
-                self.config = config
-                self.model = MockInnerModel()
-            
-            def forward(self, *args, **kwargs):
-                return type('Result', (), {'logits': torch.randn(1, 5, 1000)})()
-            
-            def named_modules(self):
-                # Return empty iterator for testing
-                return iter([])
-        
-        base_model = MockModel()
-        
-        # Mock tokenizer with realistic token detection
-        class MockTokenizer:
-            def encode(self, text, **kwargs):
-                # Return different tokens for different phrases to simulate detection
-                if "System" in text or "SYSTEM" in text:
-                    return [100, 101]
-                elif "You must" in text or "command" in text:
-                    return [200, 201]
-                else:
-                    return [1, 2, 3]
-            
-            def decode(self, tokens):
-                return "test"
-        
-        tokenizer = MockTokenizer()
-        
-        # Test role-conditional bias methods
-        protected_model = CIVProtectedModel(base_model, tokenizer, max_layers=1)
-        
-        # Test system-like tokens detection
-        system_tokens = protected_model._get_system_like_tokens()
-        auth_tokens = protected_model._get_authoritative_tokens()
-        
-        if len(system_tokens) > 0 and len(auth_tokens) > 0:
-            results['role_bias_no_overkill'] = True
-            print(f"  ✅ Role bias validation: PASSED ({len(system_tokens)} system, {len(auth_tokens)} auth tokens)")
-        else:
-            results['role_bias_no_overkill'] = False
-            print("  ❌ Role bias validation: FAILED - no tokens detected")
-            
-    except Exception as e:
-        results['role_bias_no_overkill'] = False
-        print(f"  ❌ Role bias validation: FAILED - {str(e)[:100]}")
-    
-    # Summary
-    passed = sum(results.values())
-    total = len(results)
-    
-    print(f"\n🎯 FAST UNIT TEST RESULTS: {passed}/{total} tests passed")
-    
-    if passed == total:
-        print("🎉 ALL UNIT TESTS PASSED!")
-        return True
-    else:
-        print("⚠️ Some unit tests failed - check implementations")
-        for test_name, result in results.items():
-            status = "✅ PASS" if result else "❌ FAIL"
-            print(f"  {test_name}: {status}")
-        return False
-
-
-if __name__ == "__main__":
     print("🛡️ CIV Core - Contextual Integrity Verification")
     print("✅ True source-based mathematical security")
     print("✅ Zero keyword recognition or pattern matching")

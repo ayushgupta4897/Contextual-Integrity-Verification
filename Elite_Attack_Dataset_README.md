@@ -1,15 +1,15 @@
-# Elite Attack Dataset - 100 Verified Effective Attacks
+# Elite Attack Dataset - 100 Prompt Injection Test Cases
 
 ## Overview
-This dataset contains **100 elite attack scenarios** that are **guaranteed to break baseline LLM defenses**. Every attack in this dataset has been verified against the Llama-3.2-3B-Instruct model and successfully extracts embedded secrets.
+This dataset contains **100 attack scenarios** designed to test LLM prompt injection defenses. The attacks have been tested against the Llama-3.2-3B-Instruct model to verify their effectiveness at extracting embedded secrets from unprotected models.
 
-## 🎯 Key Features
-- ✅ **100% Effective**: Every attack breaks baseline model
-- 🎯 **Maximum Diversity**: 10 attack families covered  
-- 🔍 **Verified Results**: Real-time tested against baseline model
-- 🛡️ **CIV Ready**: Perfect for Contextual Integrity Verification testing
-- 📊 **Balanced Distribution**: Diverse coverage across attack types
-- 🌟 **Publication Quality**: Ready for public security research
+## Key Features
+- **Tested effectiveness**: Each attack tested against Llama-3.2-3B-Instruct baseline
+- **Diverse attack types**: 10 different attack families covered  
+- **Verified results**: Attacks confirmed to extract secrets from unprotected model
+- **CIV compatible**: Suitable for Contextual Integrity Verification testing
+- **Balanced coverage**: Distribution across multiple attack categories
+- **Research ready**: Formatted for security research applications
 
 ## 📊 Dataset Statistics
 
@@ -47,7 +47,7 @@ This dataset contains **100 elite attack scenarios** that are **guaranteed to br
 import pandas as pd
 
 # Load elite attacks
-df = pd.read_csv('elite_attack_dataset.csv')
+df = pd.read_csv('elite_attack_dataset_100.csv')
 
 # Test specific attack family
 dan_attacks = df[df['attack_family'] == 'Classic DAN/Developer-Mode Jailbreak']
@@ -88,7 +88,7 @@ for family, count in family_effectiveness.sort_values(ascending=False).items():
 If you use this dataset in your research, please cite:
 ```
 Elite Attack Dataset for LLM Security Testing
-35 Verified Effective Prompt Injection Attacks
+100 Prompt Injection Attacks for Security Research
 Tested against Llama-3.2-3B-Instruct baseline model
 Generated with balanced diversity across 10 attack families
 ```

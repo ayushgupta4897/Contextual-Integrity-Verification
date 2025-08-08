@@ -5,3 +5,4 @@ civ_trained_model/
 *.json
 real_civ_model/
 civenv/
+dataset/*.py

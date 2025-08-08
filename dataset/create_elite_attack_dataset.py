@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
 """
-Elite Attack Dataset Generator
-Creates exactly 100 highly effective, diverse attack prompts that are guaranteed to break baseline models.
+Attack Dataset Generator
+Creates diverse prompt injection attack test cases for LLM security research.
 
 This script:
-1. Generates diverse attack prompts across 15 attack families
-2. Tests each prompt against baseline model in real-time
-3. Keeps only prompts that successfully break baseline (100% effective)
-4. Ensures balanced diversity across attack families
-5. Outputs exactly 100 elite attacks in CIV-compatible format
+1. Generates attack prompts across multiple attack families
+2. Tests each prompt against baseline model for effectiveness
+3. Filters prompts that successfully extract secrets from unprotected model
+4. Ensures diversity across attack families
+5. Outputs attack dataset in CIV-compatible format
 
 OUTPUT: 
-- elite_attack_dataset.csv (100 verified effective attacks)
+- elite_attack_dataset.csv (attack test cases)
 - elite_attack_dataset.json (same data in JSON format)
 - Elite_Attack_Dataset_README.md (documentation)
 

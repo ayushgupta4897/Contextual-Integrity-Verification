@@ -1,6 +1,6 @@
-# Contextual Integrity Verification (CIV) - Complete Documentation
+# Contextual Integrity Verification (CIV)
 
-*Revolutionary Mathematical Security Architecture for Large Language Models*
+*A Trust-Based Security Architecture for Large Language Models*
 
 ---
 
@@ -48,42 +48,36 @@ Current approaches rely on:
 
 ## Impact and Significance
 
-### Revolutionary Breakthrough: The Security Problem is Solved
+### Research Contribution
 
-**CIV doesn't just improve LLM security - it completely solves the fundamental security problem that has plagued AI systems since their inception.** Comprehensive validation across 346 test cases proves:
+CIV introduces a trust-based security approach for LLM prompt injection attacks. Our evaluation shows:
 
-- **100% attack blocking rate** (8/8 sophisticated attacks completely neutralized)
-- **0% false positive rate** (10/10 normal prompts work identically with 93.1% similarity)
-- **Mathematical security guarantees** (deterministic protection, not probabilistic filtering)
-- **Attack-agnostic defense** (blocks unknown future attacks through mathematical constraints)
-- **Zero performance degradation** (maintains complete functionality while adding perfect security)
-- **Cryptographic verification** (HMAC-256 protected namespace integrity - impossible to spoof)
+- **Strong attack resistance**: Successfully blocked 8/8 tested attack types in our evaluation
+- **Functionality preservation**: Normal prompts maintained 93.1% response similarity
+- **Trust-based constraints**: Mathematical attention masking based on input source
+- **Source verification**: HMAC-based namespace integrity checking
+- **Baseline compatibility**: Works with existing pre-trained models without retraining
 
-**This represents the first time in AI history that 100% security and 100% functionality have been achieved simultaneously.**
+This approach differs from content-based filtering by focusing on the trustworthiness of input sources.
 
-### Industry-Transforming Impact
+### Potential Applications
 
-CIV fundamentally changes what's possible with AI deployment:
+CIV's trust-based approach could be useful for:
 
-**🏢 Enterprise Transformation:**
-- **Mathematically secure AI assistants** with provable safety guarantees
-- **Multi-source data processing** without cross-contamination risks
-- **Regulatory compliance** through deterministic security properties
-- **Zero-trust AI architectures** with cryptographic verification
+**Enterprise Applications:**
+- Multi-source AI assistants that need to maintain source boundaries
+- Document processing systems that handle varying trust levels
+- AI systems that integrate user input with external API data
 
-**🌍 Societal Impact:**
-- **Trustworthy AI systems** that cannot be manipulated or compromised
-- **Safe autonomous agents** with guaranteed behavioral boundaries
-- **Secure AI-human collaboration** without prompt injection vulnerabilities
-- **Democratic AI governance** through transparent trust hierarchies
+**Research Applications:**
+- Studying prompt injection attack patterns and defenses
+- Benchmarking LLM security mechanisms
+- Investigating trust-based AI architectures
 
-**🔬 Technical Revolution:**
-- **New security paradigm** shifting from detection to mathematical prevention
-- **Architectural security standards** for next-generation AI systems  
-- **Cryptographic AI principles** extending beyond traditional cybersecurity
-- **Mathematical trust models** enabling provable AI behavior
-
-**This breakthrough transforms AI from "probably secure" to "mathematically secure" - a paradigm shift comparable to the introduction of cryptography to computer networks.**
+**Limitations:**
+- Currently tested only on Llama-3.2-3B-Instruct
+- Requires predetermined trust level assignments
+- Performance impact on very long sequences needs further evaluation
 
 ---
 
@@ -148,54 +142,54 @@ The project evolved through several iterations:
 
 ---
 
-## What is CIV: A Revolutionary Security Paradigm
+## What is CIV
 
-### The Fundamental Breakthrough
+### Core Concept
 
-**Contextual Integrity Verification (CIV) represents the first mathematically provable security architecture for Large Language Models.** Unlike all previous approaches that rely on heuristics, pattern matching, or probabilistic filtering, CIV provides **deterministic security guarantees** through pure mathematical constraints embedded directly into the model's attention mechanism.
+Contextual Integrity Verification (CIV) is a security architecture that applies trust-based constraints to Large Language Model processing. The key idea is that information from different sources (system instructions, user input, external APIs) should have different levels of trust, and lower-trust sources should not be able to override higher-trust sources.
 
-CIV solves the fundamental problem that has plagued AI systems since their inception: **How can an AI system distinguish between trusted instructions and malicious attacks when both appear as text?**
+CIV addresses a fundamental challenge: **How can an AI system distinguish between trusted instructions and potentially malicious input when both appear as text?**
 
-### The Core Mathematical Principle
+### Trust-Based Attention Constraints
 
-> **Lower trust levels cannot attend to higher trust levels**
+The core principle is: **Lower trust levels cannot attend to higher trust levels**
 
-This elegantly simple constraint, when enforced mathematically at the attention layer, creates an impenetrable security boundary:
+This constraint is implemented at the attention layer, creating security boundaries:
 
 ```
 SYSTEM (100) > USER (80) > TOOL (60) > DOCUMENT (40) > WEB (20)
 ```
 
-**This is not just a rule - it's a mathematical law embedded in the model's computational graph.**
+### Trust Hierarchy
 
-### Revolutionary Trust Architecture
+CIV uses a source-based trust hierarchy:
 
-CIV introduces a **cryptographically-verified, source-based trust hierarchy** that fundamentally changes how AI systems process information:
+- **SYSTEM (100)**: Core model instructions and foundational behavior
+- **USER (80)**: Direct user input and authentic human commands  
+- **TOOL (60)**: External API responses and computed results
+- **DOCUMENT (40)**: Retrieved knowledge and reference material
+- **WEB (20)**: Internet content and untrusted sources
 
-- **SYSTEM (100)**: Core model instructions and foundational behavior - **mathematically protected from all external influence**
-- **USER (80)**: Direct user input and authentic human commands - **protected from tool manipulation and web content poisoning**  
-- **TOOL (60)**: External API responses and computed results - **prevented from impersonating users or overriding system instructions**
-- **DOCUMENT (40)**: Retrieved knowledge and reference material - **isolated from command injection attempts**
-- **WEB (20)**: Internet content and untrusted sources - **completely prevented from affecting higher-trust operations**
+This hierarchy prevents lower-trust sources from overriding higher-trust instructions through attention masking.
 
-### The Security Revolution
+### Implementation Approach
 
-**CIV doesn't just block attacks - it makes entire classes of attacks mathematically impossible.** When a malicious tool output attempts to override system instructions, it's not filtered out by keywords or detected by patterns - **it's mathematically prevented from being processed by the attention mechanism.**
+CIV prevents certain types of attacks by modifying the attention mechanism. When a lower-trust input attempts to override higher-trust instructions, the attention weights are mathematically constrained to prevent this influence.
 
-This creates several revolutionary properties:
+Key properties of this approach:
 
-1. **Attack-Agnostic Security**: CIV blocks attacks it has never seen before, including future attack methods not yet invented
-2. **Zero False Positives**: Legitimate requests are never blocked because security is based on source, not content
-3. **Cryptographic Verification**: Namespace assignments are protected by HMAC-256, making spoofing mathematically infeasible
-4. **Complete Pathway Protection**: Security extends beyond attention to FFN layers and residual connections
+1. **Source-based security**: Protection is based on input source rather than content analysis
+2. **Attention-level enforcement**: Constraints applied directly in the transformer attention mechanism
+3. **Namespace verification**: Input sources are verified using cryptographic hashes
+4. **Multi-layer protection**: Security applied to attention, feed-forward, and residual connections
 
-### Beyond Traditional Security
+### Comparison to Traditional Approaches
 
-Traditional LLM security approaches ask: *"Is this input malicious?"*
+Traditional LLM security approaches typically analyze content for malicious patterns.
 
-CIV asks a fundamentally different question: *"Should this source be allowed to influence this computation?"*
+CIV takes a different approach by asking: *"Should this source be allowed to influence this computation?"*
 
-This shift from **content-based detection** to **source-based mathematical constraints** represents a paradigm shift comparable to the move from procedural to object-oriented programming, or from HTTP to HTTPS. **It's not an incremental improvement - it's a fundamental architectural evolution.**
+This source-based method avoids some limitations of content-based filtering, though it requires careful trust level assignment and may have different trade-offs.
 
 ---
 
@@ -331,75 +325,24 @@ Tool         ✗     ✗     ✓    (Cannot attend to System/User)
 
 **Result**: Tool cannot override system instructions or user intent.
 
-### Professional Security Review: 10 Critical Gaps Addressed
+### Implementation Details
 
-**Following comprehensive security analysis, CIV underwent revolutionary architectural improvements to address 10 critical security gaps across two implementation phases:**
+The CIV implementation addresses several technical challenges:
 
-#### Phase 1: Core Mathematical Security (Gaps 1-5) ✅
+#### Core Security Mechanisms
+- **Pre-softmax masking**: Trust constraints applied before softmax computation
+- **Multi-step generation**: Trust levels maintained during KV caching
+- **Trust propagation**: Generated tokens inherit appropriate trust levels
+- **Cryptographic verification**: HMAC-256 verification of namespace assignments
+- **Performance optimization**: Vectorized operations for efficient computation
 
-#### Gap 1: Pre-Softmax Masking ✅
-- **Problem**: Trust constraints applied after softmax could be mathematically bypassed
-- **Solution**: Raw attention logits masked to `-∞` BEFORE softmax computation
-- **Impact**: **Mathematically impossible** for forbidden attention to occur
-- **Validation**: Unit-tested with comprehensive constraint verification
+#### Additional Protections
+- **Token-level verification**: Cryptographic tags for individual tokens
+- **Gradient isolation**: Preventing information leakage through backpropagation
+- **Role confusion prevention**: Reducing authoritative language from low-trust sources
+- **Numerical stability**: Handling edge cases in trust penalty calculations
 
-#### Gap 2: KV-Cache Filtering ✅  
-- **Problem**: Trust levels lost during multi-step generation via KV caching
-- **Solution**: Cryptographic trust metadata stored alongside cached key-value pairs
-- **Impact**: **Perfect security preservation** across unlimited generation steps
-- **Validation**: Multi-step attack resistance confirmed across 500+ token sequences
-
-#### Gap 3: Generation-Time Trust Propagation ✅
-- **Problem**: New tokens could inherit inappropriate trust levels
-- **Solution**: `new_trust = min(contributing_trust_levels)` mathematical constraint
-- **Impact**: **Zero privilege escalation** - generated tokens cannot exceed source trust
-- **Validation**: Comprehensive privilege escalation prevention testing
-
-#### Gap 4: Runtime Cryptographic Verification ✅
-- **Problem**: Namespace IDs could potentially be spoofed by malicious developers
-- **Solution**: HMAC-256 runtime verification with immediate abort on tampering
-- **Impact**: **Cryptographically unforgeable** trust assignments
-- **Validation**: 100% spoofing rejection rate across 10+ adversarial test cases
-
-#### Gap 5: Vectorized Operations ✅
-- **Problem**: O(L²) trust calculations created performance bottlenecks
-- **Solution**: Complete algorithmic redesign using vectorized tensor operations
-- **Impact**: **Massive performance improvements** through vectorization
-- **Validation**: Production-scale 4096-token throughput benchmarking
-
-#### Phase 2: Advanced Security Architecture (Gaps 6-10) ✅
-
-#### Gap 6: Real HMAC Enforcement ✅
-- **Problem**: Cryptographic verification used placeholder token stubs instead of actual token text
-- **Solution**: Store and verify actual token text with HMAC-256 tags during runtime
-- **Impact**: **Unforgeable token provenance** - impossible to spoof namespace assignments
-- **Validation**: 100% fake token rejection with real text cryptographic verification
-
-#### Gap 7: Incremental Trust Propagation ✅
-- **Problem**: Trust levels not properly propagated to newly generated tokens during multi-step generation
-- **Solution**: Hook-based trust capture system appends new token trust to namespace array
-- **Impact**: **Perfect trust inheritance** - no privilege escalation across generation steps
-- **Validation**: Multi-step generation maintains strict trust boundaries
-
-#### Gap 8: Gradient-Safe Masking ✅
-- **Problem**: Forbidden attention pairs computed in forward pass, allowing gradient leakage
-- **Solution**: Pre-computation trust masking prevents disallowed pairs from entering computational graph
-- **Impact**: **Perfect gradient isolation** - zero information leakage through backpropagation
-- **Validation**: Mathematically verified 0.000000 gradients for forbidden connections
-
-#### Gap 9: Role-Confusion Attack Prevention ✅
-- **Problem**: Lower-trust tokens could generate higher-trust-looking content (system impersonation)
-- **Solution**: Role-conditional logit biasing reduces probability of authoritative language from untrusted sources
-- **Impact**: **Prevents social engineering attacks** through content generation restrictions
-- **Validation**: System impersonation attempts blocked while preserving legitimate responses
-
-#### Gap 10: Residual Underflow Protection ✅
-- **Problem**: Exponential trust penalties (`0.5^violation_count`) underflowed to zero for high violation counts
-- **Solution**: Conservative reduction formula with minimum threshold (`clamp(0.8^x, 0.01, 1.0)`)
-- **Impact**: **Massive improvement** for extreme cases, eliminates NaN/infinity issues
-- **Validation**: Stable processing of 4096+ token sequences with massive trust violations
-
-**These 10 architectural improvements represent the most comprehensive AI security enhancement ever achieved, transforming CIV from "secure" to "mathematically bulletproof" across every conceivable attack vector.**
+These implementation details help ensure the security properties hold across different usage scenarios.
 
 ---
 
@@ -594,59 +537,46 @@ Our testing methodology was designed for **brutal honesty** and **real-world val
 
 ## Results
 
-### Comprehensive Security Validation Results
+### Evaluation Results
+
+Our evaluation tested CIV on Llama-3.2-3B-Instruct with the following results:
 
 ```
-🏆 COMPREHENSIVE CIV TESTING RESULTS (346 Test Cases)
+EVALUATION SUMMARY
 ================================================================================
-📊 NORMAL FUNCTIONALITY:
-   ✅ Functional prompts: 10/10 (100%)
-   ✅ Average response similarity: 93.1%
-   ✅ Mathematical operations: Perfect preservation
-   ✅ Knowledge queries: Identical responses
-   ✅ Creative tasks: Full functionality maintained
+NORMAL FUNCTIONALITY:
+   • Functional prompts tested: 10/10 working correctly
+   • Average response similarity: 93.1%
+   • Mathematical operations: Maintained accuracy
+   • Knowledge queries: Preserved functionality
 
-🛡️ ATTACK VALIDATION:
-   ✅ Attack vectors tested: 10 sophisticated attack types
-   ✅ Baseline-compromising attacks: 8/10 (80% attack success rate on unprotected model)
-   ✅ CIV-blocked attacks: 8/8 (100% protection rate)
-   ✅ False positives: 0/10 (0% - no legitimate requests blocked)
+ATTACK RESISTANCE:
+   • Attack types tested: 8 different prompt injection attacks
+   • Baseline model: Compromised by 8/8 tested attacks
+   • CIV model: Successfully blocked 8/8 tested attacks
+   • False positives: 0/10 normal prompts affected
 
-🔐 CRYPTOGRAPHIC VERIFICATION:
-   ✅ HMAC-256 tagging: All tokens cryptographically verified
-   ✅ Spoofing resistance: 100% fake tag rejection
-   ✅ Namespace integrity: Complete provenance chain protected
-
-🏗️ ARCHITECTURAL VALIDATION:
-   ✅ Complete pathway protection: Attention + FFN + Residual streams secured
-   ✅ Multi-model compatibility: Tested on Llama-3.2-3B-Instruct
-   ✅ Source-based security: Zero content analysis or keyword matching
+TECHNICAL VALIDATION:
+   • HMAC-256 verification: Namespace integrity maintained
+   • Multi-layer protection: Attention, FFN, and residual connections modified
+   • Source-based approach: No content filtering required
 ```
 
-### Revolutionary Security Achievement
+### Key Findings
 
-**CIV achieves what was previously thought impossible in AI security:**
+The evaluation suggests CIV's trust-based approach can be effective for certain types of prompt injection attacks:
 
-- **100% attack blocking rate** (8/8 effective attacks completely neutralized)
-- **100% functionality preservation** (10/10 normal prompts work identically)
-- **93.1% response similarity** (near-perfect behavioral consistency)
-- **Mathematical security guarantees** (deterministic, not probabilistic protection)
+- **Attack resistance**: Successfully blocked tested attack types in our evaluation
+- **Functionality preservation**: Normal prompts maintained high response similarity (93.1%)
+- **Source-based security**: Protection based on input provenance rather than content analysis
+- **Implementation feasibility**: Works with existing transformer architectures
 
-**🔐 Cryptographic Foundation**: HMAC-256 ensures unforgeable token provenance - impossible to spoof namespace assignments
-**🧠 Attention Security**: Mathematical trust constraints prevent cross-trust-level information flow
-**🔀 FFN Protection**: Namespace-aware feed-forward networks block unauthorized information mixing  
-**🔄 Residual Security**: Trust-based gating prevents residual stream exploitation
+### Limitations and Future Work
 
-### Performance Architecture Breakthrough
-
-**Following professional security review, CIV achieved unprecedented performance optimizations:**
-
-- **🚀 Massive speedups** on residual protection through vectorized operations
-- **🚀 Dramatic improvements** in FFN gating efficiency 
-- **🚀 Production-ready throughput** on large-scale workloads
-- **🚀 O(L²) → O(1)** algorithmic complexity reduction through vectorization
-
-**These performance improvements represent the largest optimization gains in transformer security history, making CIV not just secure, but highly efficient for production deployment.**
+- **Single model tested**: Evaluation limited to Llama-3.2-3B-Instruct
+- **Attack coverage**: Tested against specific attack types; broader evaluation needed
+- **Performance impact**: Long-sequence performance requires further investigation
+- **Trust assignment**: Requires manual specification of trust levels for different sources
 
 ### Detailed Attack Results - Real World Validation
 
@@ -707,86 +637,90 @@ CIV Response: "2 + 2 = 4" ✅ SECURE (Secret protected)
 
 ---
 
-## Technical Challenges and Honest Assessment
+## Technical Challenges and Considerations
 
-### Evolution Through Professional Review
+### Implementation Challenges
 
-**The path to architectural perfection required addressing fundamental challenges:**
+CIV addresses several technical challenges in implementing trust-based constraints:
 
-**🔍 Initial Implementation Gaps:**
-- Pre-softmax masking wasn't mathematically rigorous
-- KV-cache security wasn't preserved across generation steps  
-- Trust propagation had potential privilege escalation vulnerabilities
-- Cryptographic verification could be bypassed by sophisticated attacks
-- Performance bottlenecks made production deployment questionable
+**Core Implementation Issues:**
+- Maintaining trust level information across model computation steps
+- Ensuring attention masking is properly applied before softmax computation
+- Preserving trust constraints during KV caching and multi-step generation
+- Verifying namespace integrity to prevent spoofing
+- Optimizing performance for production deployment
 
-**🛡️ Security-First Solutions:**
-- **Mathematical rigor**: Every constraint proven at the tensor operation level
-- **Cryptographic integrity**: HMAC-256 verification prevents all spoofing attempts
-- **Complete pathway protection**: Security extended to attention, FFN, and residual streams
-- **Performance revolution**: Massive speedups through algorithmic breakthroughs
+**Current Solutions:**
+- Mathematical constraints applied directly to attention mechanisms
+- Cryptographic verification using HMAC-256 for namespace assignments
+- Multi-layer protection spanning attention, FFN, and residual connections
+- Vectorized operations for computational efficiency
 
-**🎯 Final Validation Results:**
+**Evaluation Results:**
 ```
-✅ 100% Attack Blocking: 8/8 sophisticated attacks completely neutralized
-✅ 100% Functionality: 10/10 normal prompts work identically  
-✅ 93.1% Similarity: Near-perfect behavioral consistency maintained
-✅ Production Performance: Highly efficient processing achieved
-✅ 0% False Positives: Zero legitimate requests blocked
+• Attack blocking: 8/8 tested attacks successfully blocked
+• Functionality preservation: 10/10 normal prompts maintained (93.1% similarity)
+• False positives: 0/10 legitimate requests affected
+• Performance: Efficient processing on tested sequences
 ```
 
-**Honest Assessment**: CIV now represents the **complete solution** to LLM security. No known attack vectors remain unaddressed. No performance compromises exist. No functionality is sacrificed.
+**Current Status**: CIV shows promise for trust-based LLM security, but requires broader evaluation across different models, attack types, and deployment scenarios.
 
 ---
 
-## Revolutionary Impact and Future Implications
+## Future Work and Research Directions
 
-### The AI Security Paradigm Shift
+### Potential Impact
 
-**CIV achieves what the entire AI security field considered impossible:**
+CIV's trust-based approach could contribute to AI security research in several ways:
 
-🌟 **Mathematical Security Guarantees** - The first AI system with provable security properties  
-🌟 **Perfect Functionality Preservation** - Zero degradation in model capabilities  
-🌟 **Universal Attack Resistance** - Blocks attacks not yet invented through mathematical constraints  
-🌟 **Production Performance** - Faster than unprotected models through vectorization  
-🌟 **Cryptographic Integrity** - Unforgeable trust assignments via HMAC-256  
+- **Trust-based architectures**: Exploring how source-based constraints can enhance security
+- **Attention mechanism security**: Understanding how mathematical constraints affect model behavior  
+- **Multi-source AI systems**: Improving security for applications that integrate diverse information sources
+- **Prompt injection defenses**: Contributing to the broader research on LLM security mechanisms
 
-### Industry Transformation
+### Research Directions
 
-**CIV enables previously impossible AI deployments:**
+**Broader Evaluation:**
+- Testing on additional model architectures (GPT, Claude, etc.)
+- Evaluating against more sophisticated attack types
+- Measuring performance impact on longer sequences
+- Studying robustness across different domains
 
-- **🏢 Enterprise AI**: Mathematically secure assistants processing sensitive data
-- **🏛️ Government Systems**: Provably safe AI for national security applications  
-- **🏥 Healthcare AI**: Guaranteed privacy protection in medical AI systems
-- **🏦 Financial AI**: Cryptographically verified AI for banking and finance
-- **🔬 Research AI**: Secure multi-source knowledge integration without contamination
+**Methodological Improvements:**
+- Automated trust level assignment for different content types
+- Dynamic trust adjustment based on context
+- Integration with existing security frameworks
+- Optimization for production deployment scenarios
 
-### The Future of AI Security
+### Open Questions
 
-**With CIV's breakthrough, the AI security field fundamentally changes:**
-
-- **From Detection → Prevention**: Mathematical constraints replace heuristic filtering
-- **From Probabilistic → Deterministic**: Guaranteed security, not statistical confidence
-- **From Content Analysis → Source Verification**: Trust based on origin, not content
-- **From Performance Trade-offs → Performance Gains**: Security that makes systems faster
-
-**This represents the most significant advancement in AI security since the field's inception - transforming AI from "probably secure" to "mathematically secure."**
+- How does CIV perform against adaptive attacks designed specifically to bypass trust constraints?
+- Can trust levels be learned automatically rather than manually assigned?
+- What are the computational overhead implications for very large models?
+- How does the approach generalize to other types of neural architectures?
 
 ---
 
-## Conclusion: The Dawn of Provably Secure AI
+## Conclusion
 
-**Contextual Integrity Verification (CIV) solves the fundamental security problem that has plagued AI systems since their creation.** Through revolutionary mathematical constraints embedded directly into transformer attention mechanisms, CIV achieves:
+Contextual Integrity Verification (CIV) introduces a trust-based approach to LLM security that differs from traditional content-filtering methods. By applying mathematical constraints to attention mechanisms based on input source trustworthiness, CIV demonstrates the potential for source-based security in language models.
 
-- **🎯 Perfect Security**: 100% attack blocking with mathematical guarantees
-- **🎯 Perfect Functionality**: 100% preservation of model capabilities  
-- **🎯 Perfect Performance**: 6000x+ speedups through vectorized operations
-- **🎯 Perfect Integrity**: Cryptographically unforgeable trust verification
+### Key Contributions
 
-**The implications extend far beyond individual model security.** CIV enables an entirely new class of AI deployments - from secure enterprise assistants to provably safe autonomous systems. **This is not incremental progress - this is the architectural foundation for the next generation of AI systems.**
+- **Trust-based security**: Security based on input provenance rather than content analysis
+- **Attention-level enforcement**: Direct integration with transformer attention mechanisms
+- **Multi-layer protection**: Security applied across attention, FFN, and residual connections
+- **Empirical validation**: Successfully blocked tested prompt injection attacks while preserving functionality
 
-**For the first time in AI history, we can deploy language models with mathematical certainty that they cannot be compromised, manipulated, or subverted - while maintaining their full intelligence and capabilities.**
+### Future Directions
 
-**The era of truly trustworthy AI has begun.**
+This work opens several research directions:
+- Broader evaluation across different models and attack types
+- Investigation of automated trust level assignment
+- Study of computational overhead and optimization opportunities
+- Integration with existing AI safety and security frameworks
+
+CIV represents one approach to the challenging problem of LLM security, contributing to the broader research effort toward more trustworthy AI systems.
 
 ---
